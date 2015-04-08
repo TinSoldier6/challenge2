@@ -15,8 +15,6 @@ const (
 	keySize    = 32
 	nonceSize  = 24
 	msgLenSize = 2
-	overhead   = nonceSize + box.Overhead
-	bufSize    = 32768 + overhead
 )
 
 // SecureReader implements NaCl encryption over an io.Reader.
@@ -46,7 +44,7 @@ func (s SecureReader) Read(p []byte) (int, error) {
 		return 0, err
 	}
 
-	buf := make([]byte, n)
+	buf := make([]byte, n+secretbox.Overhead)
 	_, err = io.ReadFull(s.r, buf)
 	if err != nil {
 		return 0, err
