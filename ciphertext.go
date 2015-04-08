@@ -1,3 +1,5 @@
+// ciphertext.go contains types and routines for implementing NaCl-encrypted streams.
+
 package main
 
 import (
@@ -23,7 +25,7 @@ type SecureReader struct {
 	r   io.Reader
 }
 
-// NewSecureReader instantiates a new SecureReader.
+// NewSecureReader instantiates a new NaCl-encrypted stream for reading.
 func NewSecureReader(r io.Reader, priv, pub *[keySize]byte) SecureReader {
 	s := SecureReader{r: r}
 	s.key = new([keySize]byte)
@@ -31,6 +33,7 @@ func NewSecureReader(r io.Reader, priv, pub *[keySize]byte) SecureReader {
 	return s
 }
 
+// Read reads a slice of bytes from an encrypted stream and returns the number of bytes read.
 func (s SecureReader) Read(p []byte) (int, error) {
 	var n int16
 	err := binary.Read(s.r, binary.LittleEndian, &n)
@@ -65,7 +68,7 @@ type SecureWriter struct {
 	w   io.Writer
 }
 
-// NewSecureWriter instantiates a new SecureWriter.
+// NewSecureWriter instantiates a new NaCl-encrypted stream for writing.
 func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
 	s := SecureWriter{w: w}
 	s.key = new([keySize]byte)
@@ -73,6 +76,7 @@ func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
 	return s
 }
 
+// Write writes a slice of bytes to an encrypted stream and returns the number of bytes written.
 func (s SecureWriter) Write(p []byte) (int, error) {
 	var nonce [nonceSize]byte
 	_, err := io.ReadFull(rand.Reader, nonce[:])

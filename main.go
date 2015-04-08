@@ -8,16 +8,6 @@ import (
 	"os"
 )
 
-// // NewSecureReader instantiates a new SecureReader
-// func NewSecureReader(r io.Reader, priv, pub *[32]byte) io.Reader {
-//         return nil
-// }
-
-// // NewSecureWriter instantiates a new SecureWriter
-// func NewSecureWriter(w io.Writer, priv, pub *[32]byte) io.Writer {
-//         return nil
-// }
-
 // Dial generates a private/public key pair,
 // connects to the server, perform the handshake
 // and return a reader/writer.
