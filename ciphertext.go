@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"golang.org/x/crypto/nacl/box"
@@ -27,12 +28,37 @@ type SecureReader struct {
 // NewSecureReader instantiates a new SecureReader.
 func NewSecureReader(r io.Reader, priv, pub *[keySize]byte) SecureReader {
 	s := SecureReader{r: r}
+	s.key = new([keySize]byte)
 	box.Precompute(s.key, pub, priv)
 	return s
 }
 
 func (s SecureReader) Read(p []byte) (int, error) {
-	return 0, nil
+	var n int16
+	err := binary.Read(s.r, binary.LittleEndian, &n)
+	if err != nil {
+		return 0, err
+	}
+
+	var nonce [nonceSize]byte
+	err = binary.Read(s.r, binary.LittleEndian, &nonce)
+	if err != nil {
+		return 0, err
+	}
+
+	buf := make([]byte, n)
+	_, err = io.ReadFull(s.r, buf)
+	if err != nil {
+		return 0, err
+	}
+
+	in, ok := secretbox.Open(nil, buf, &nonce, s.key)
+	if !ok {
+		return 0, fmt.Errorf("Failed to decrypt message.")
+	}
+
+	copy(p, in)
+	return len(in), nil
 }
 
 // SecureWriter implements NaCl encryption over an io.Reader.
@@ -44,38 +70,23 @@ type SecureWriter struct {
 // NewSecureWriter instantiates a new SecureWriter.
 func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
 	s := SecureWriter{w: w}
+	s.key = new([keySize]byte)
 	box.Precompute(s.key, pub, priv)
 	return s
 }
 
 func (s SecureWriter) Write(p []byte) (int, error) {
-	m := packMessage(p)
-	out := make([]byte, nonceSize, nonceSize+len(m))
 	var nonce [nonceSize]byte
-
 	_, err := io.ReadFull(rand.Reader, nonce[:])
 	if err != nil {
 		return 0, err
 	}
 
-	copy(out, nonce[:])
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, int16(len(p)))
+	binary.Write(buf, binary.LittleEndian, nonce)
 
-	return s.w.Write(secretbox.Seal(out, m, &nonce, s.key))
-}
-
-// packMessage prepends a slice's length to the message.
-func packMessage(m []byte) []byte {
-	l := len(m)
-	out := bytes.NewBuffer(make([]byte, 0, msgLenSize))
-	binary.Write(out, binary.LittleEndian, int16(l))
-	binary.Write(out, binary.LittleEndian, m)
-	return out.Bytes()
-}
-
-// unpackMessage extracts a length and a message from a previously packed message.
-func unpackMessage(m []byte) (int, []byte) {
-	out := bytes.NewBuffer(m)
-	var l int16
-	binary.Read(out, binary.LittleEndian, l)
-	return int(l), out.Bytes()
+	out := make([]byte, buf.Len(), buf.Len()+len(p))
+	buf.Read(out)
+	return s.w.Write(secretbox.Seal(out, p, &nonce, s.key))
 }
