@@ -8,18 +8,6 @@ import (
 	"os"
 )
 
-// Dial generates a private/public key pair,
-// connects to the server, perform the handshake
-// and return a reader/writer.
-// func Dial(addr string) (io.ReadWriteCloser, error) {
-//         return nil, nil
-// }
-
-// Serve starts a secure echo server on the given listener.
-// func Serve(l net.Listener) error {
-//         return nil
-// }
-
 func main() {
 	port := flag.Int("l", 0, "Listen mode. Specify port")
 	flag.Parse()
