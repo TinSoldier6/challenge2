@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -37,7 +38,7 @@ func main() {
 	}
 	buf := make([]byte, n)
 	n, err = conn.Read(buf)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		log.Fatal(err)
 	}
 	fmt.Printf("%s\n", buf[:n])
