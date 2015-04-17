@@ -23,7 +23,7 @@ func Dial(addr string) (io.ReadWriteCloser, error) {
 		return nil, err
 	}
 
-	peer, err := clientExchangeKeys(conn, pub)
+	peer, err := exchangeKeys(conn, pub)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +47,14 @@ func Serve(l net.Listener) error {
 			return err
 		}
 
-		peer, err := serveExchangeKeys(conn, pub)
+		peer, err := exchangeKeys(conn, pub)
 		if err != nil {
 			return err
 		}
 		secure := NewSecureConn(conn, priv, peer)
+
+		// If nothing is copied then the server will end. This allows the client to
+		// send an empty message to kill the server.
 		if n, err := io.Copy(secure, secure); n == 0 {
 			if err != nil {
 				return err
@@ -61,7 +64,10 @@ func Serve(l net.Listener) error {
 	}
 }
 
-func clientExchangeKeys(conn net.Conn, pub *[keySize]byte) (*[keySize]byte, error) {
+// exchangeKeys exchanges keys between the client and the server. The same function
+// can be used for both because with such small pieces of data, the order of Write
+// and Read should not matter.
+func exchangeKeys(conn net.Conn, pub *[keySize]byte) (*[keySize]byte, error) {
 
 	peer := new([keySize]byte)
 
@@ -71,22 +77,6 @@ func clientExchangeKeys(conn net.Conn, pub *[keySize]byte) (*[keySize]byte, erro
 	}
 
 	_, err = conn.Read(peer[:])
-	if err != nil {
-		return nil, err
-	}
-
-	return peer, nil
-}
-
-func serveExchangeKeys(conn net.Conn, pub *[keySize]byte) (*[keySize]byte, error) {
-	peer := new([keySize]byte)
-
-	_, err := conn.Read(peer[:])
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = conn.Write(pub[:])
 	if err != nil {
 		return nil, err
 	}
