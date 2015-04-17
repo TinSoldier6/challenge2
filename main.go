@@ -30,11 +30,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, err := conn.Write([]byte(os.Args[2])); err != nil {
+
+	var n int
+	if n, err = conn.Write([]byte(os.Args[2])); err != nil {
 		log.Fatal(err)
 	}
-	buf := make([]byte, len(os.Args[2]))
-	n, err := conn.Read(buf)
+	buf := make([]byte, n)
+	n, err = conn.Read(buf)
 	if err != nil {
 		log.Fatal(err)
 	}
