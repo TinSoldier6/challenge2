@@ -37,9 +37,6 @@ func (s SecureReader) Read(p []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	//if n < nonceSize {
-	//	return 0, fmt.Errorf("SecureReader.Read: invalid message length: %d", n)
-	//}
 	return copy(p, decrypt(p[:n], s.key)), nil
 }
 
@@ -74,6 +71,9 @@ func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
 }
 
 func (s SecureWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
 	return s.Writer.Write(encrypt(p, s.key))
 }
 

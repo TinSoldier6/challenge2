@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"io"
 	"net"
 
@@ -51,7 +52,12 @@ func Serve(l net.Listener) error {
 			return err
 		}
 		secure := NewSecureConn(conn, priv, peer)
-		_, err = io.Copy(secure, secure)
+		if n, err := io.Copy(secure, secure); n == 0 {
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("Server ending.")
+		}
 	}
 }
 
