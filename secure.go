@@ -1,12 +1,12 @@
-// securetext.go contains types and routines for implementing
-// NaCl-encrypted streams.
+// secure.go contains types and routines for implementing
+// NaCl-encrypted streams and network connections.
 
 package main
 
 import (
 	"crypto/rand"
-	"fmt"
 	"io"
+	"net"
 
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -33,13 +33,13 @@ func NewSecureReader(r io.Reader, priv, pub *[keySize]byte) SecureReader {
 }
 
 func (s SecureReader) Read(p []byte) (int, error) {
-	n, err := s.Read(p)
+	n, err := s.Reader.Read(p)
 	if err != nil {
 		return 0, err
 	}
-	if n < nonceSize {
-		return 0, fmt.Errorf("SecureReader.Read: invalid message length: %d", n)
-	}
+	//if n < nonceSize {
+	//	return 0, fmt.Errorf("SecureReader.Read: invalid message length: %d", n)
+	//}
 	return copy(p, decrypt(p[:n], s.key)), nil
 }
 
@@ -74,7 +74,7 @@ func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
 }
 
 func (s SecureWriter) Write(p []byte) (int, error) {
-	return s.Write(encrypt(p, s.key))
+	return s.Writer.Write(encrypt(p, s.key))
 }
 
 // encrypt returns a byte slice encrypted with key.
@@ -92,4 +92,28 @@ func newNonce() *[nonceSize]byte {
 		panic(err)
 	}
 	return &nonce
+}
+
+// SecureConn implements NaCl-encryption and decryption over a net.Conn.
+type SecureConn struct {
+	net.Conn
+	SecureReader
+	SecureWriter
+}
+
+// NewSecureConn returns a new SecureConn using an existing net.Conn, and a new
+// SecureReader and SecureWriter.
+func NewSecureConn(c net.Conn, priv, peer *[keySize]byte) SecureConn {
+	s := SecureConn{Conn: c}
+	s.SecureReader = NewSecureReader(c, priv, peer)
+	s.SecureWriter = NewSecureWriter(c, priv, peer)
+	return s
+}
+
+func (s SecureConn) Read(p []byte) (int, error) {
+	return s.SecureReader.Read(p)
+}
+
+func (s SecureConn) Write(p []byte) (int, error) {
+	return s.SecureWriter.Write(p)
 }
