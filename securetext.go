@@ -19,21 +19,21 @@ const (
 
 // SecureReader implements NaCl decryption over an io.Reader stream.
 type SecureReader struct {
+	io.Reader
 	key *[keySize]byte
-	r   io.Reader
 }
 
 // NewSecureReader returns a new SecureReader from r with a shared key formed
 // from the private, public key pair.
 func NewSecureReader(r io.Reader, priv, pub *[keySize]byte) SecureReader {
-	s := SecureReader{r: r}
+	s := SecureReader{Reader: r}
 	s.key = new([keySize]byte)
 	box.Precompute(s.key, pub, priv)
 	return s
 }
 
 func (s SecureReader) Read(p []byte) (int, error) {
-	n, err := s.r.Read(p)
+	n, err := s.Read(p)
 	if err != nil {
 		return 0, err
 	}
@@ -60,21 +60,21 @@ func decrypt(in []byte, key *[keySize]byte) []byte {
 
 // SecureWriter implements NaCl encryption over an io.Writer stream.
 type SecureWriter struct {
+	io.Writer
 	key *[keySize]byte
-	w   io.Writer
 }
 
 // NewSecureWriter returns a new SecureWriter to w with a shared key formed
 // from the private, public key pair.
 func NewSecureWriter(w io.Writer, priv, pub *[keySize]byte) SecureWriter {
-	s := SecureWriter{w: w}
+	s := SecureWriter{Writer: w}
 	s.key = new([keySize]byte)
 	box.Precompute(s.key, pub, priv)
 	return s
 }
 
 func (s SecureWriter) Write(p []byte) (int, error) {
-	return s.w.Write(encrypt(p, s.key))
+	return s.Write(encrypt(p, s.key))
 }
 
 // encrypt returns a byte slice encrypted with key.
